@@ -1,0 +1,12 @@
+✓ Search file contents
+✓ Case-insensitive search
+✓ File paths
+✓ Line numbers
+✓ Matching lines
+✓ Multiple matches
+✓ Result limit
+✓ Ignored directories
+✓ Binary-file protection
+✓ File-size protection
+✓ Structured ToolResult
+✓ Path restricted to repository

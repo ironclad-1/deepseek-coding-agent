@@ -1,0 +1,353 @@
+============================================================
+        DEEPSEEK LOCAL CODING AGENT — PROJECT ROADMAP
+============================================================
+
+FINAL GOAL
+------------------------------------------------------------
+Build a locally running, Claude Code-style coding agent powered
+by DeepSeek through Ollama.
+
+The agent should be able to:
+
+  Understand an unfamiliar Git repository
+  Read and search files
+  Plan coding tasks
+  Create / edit / delete files with approval
+  Run commands and tests
+  Review its own changes
+  Save DeepSeek reasoning traces in .reason files
+  Inspect Git status and diffs
+  Commit approved changes
+  Push approved changes to GitHub
+
+
+PHASE SUMMARY
+------------------------------------------------------------
+
+FOUNDATION
+  Phase 0  → Final Architecture
+  Phase 1  → Environment & Hardware Validation
+  Phase 2  → Ollama / DeepSeek Model Layer
+  Phase 3  → Agent Runtime
+  Phase 4  → Repository Discovery
+  Phase 5  → Tool System
+  Phase 6  → File Reading
+  Phase 7  → Repository Search
+
+MVP — THE CORE CODING AGENT
+  Phase 8  → File Editing
+  Phase 9  → Command Execution
+  Phase 10 → Safety & Approval System
+  Phase 11 → Git Integration
+  Phase 12 → Self-Review & Testing Loop
+  Phase 13 → Git Commit
+  Phase 14 → Git Push
+
+V1 — RELIABLE & SCALABLE AGENT
+  Phase 15 → Context Management
+  Phase 16 → Large Repository Support
+  Phase 17 → Failure Recovery
+  Phase 18 → Project Instructions
+  Phase 19 → Session Management
+  Phase 20 → Evaluation Framework
+  Phase 21 → Performance Optimization
+  Phase 22 → Model Benchmarking
+
+V2 — ADVANCED GITHUB WORKFLOWS
+  Phase 23 → GitHub API Integration
+  Phase 24 → Issue & Pull Request Automation
+
+
+============================================================
+CORE WORKFLOW
+------------------------------------------------------------
+
+        USER TASK
+            |
+            v
+      DEEPSEEK AGENT
+            |
+            v
+      PLAN / REASON
+            |
+            v
+     SAVE .reason TRACE
+            |
+            v
+        USE TOOLS
+            |
+            v
+      OBSERVE RESULTS
+            |
+            v
+       REVIEW / FIX
+            |
+            v
+          TEST
+            |
+            v
+       GIT DIFF
+            |
+            v
+      USER APPROVAL
+            |
+            v
+        COMMIT
+            |
+            v
+         PUSH
+            |
+            v
+         GITHUB
+
+
+============================================================
+                    DEVELOPMENT PHASES
+============================================================
+
+PHASE 0 — FINAL ARCHITECTURE
+------------------------------------------------------------
+Freeze the architecture around the final product before coding.
+
+Include:
+  • Agent Runtime
+  • Model Layer
+  • Tool System
+  • Safety Layer
+  • Repository Engine
+  • Git Engine
+  • Reasoning Trace Store (.reason)
+
+
+PHASE 1 — ENVIRONMENT & HARDWARE VALIDATION
+------------------------------------------------------------
+Check:
+  • Python
+  • Ollama
+  • Git
+  • CPU / RAM
+  • GPU / VRAM
+  • Disk space
+  • Available DeepSeek models
+
+PHASE 2 — OLLAMA / DEEPSEEK MODEL LAYER
+------------------------------------------------------------
+Build a configurable Python interface between the agent and
+DeepSeek through Ollama.
+
+Support:
+  • Thinking output
+  • Final response output
+  • Tool calls
+
+Save the thinking output from each model turn into .reason files.
+
+
+PHASE 3 — AGENT RUNTIME
+------------------------------------------------------------
+Implement the core:
+  User → Reason → Save .reason → Tool → Result → Reason → ...
+
+Integrate reasoning trace persistence into the agent loop.
+
+
+PHASE 4 — REPOSITORY DISCOVERY
+------------------------------------------------------------
+Scan repository structure, files, directories, project metadata,
+and Git state.
+
+PHASE 5 — TOOL SYSTEM
+------------------------------------------------------------
+Create the controlled tool registry and tool interfaces.
+
+Initial tools:
+  • read_file()
+  • write_file()
+  • edit_file()
+  • search_repo()
+  • run_command()
+  • git_status()
+  • git_diff()
+  • git_commit()
+  • git_push()
+
+PHASE 6 — FILE READING
+------------------------------------------------------------
+Implement safe and efficient file reading.
+
+PHASE 7 — REPOSITORY SEARCH
+------------------------------------------------------------
+Allow the agent to locate relevant files, functions, classes,
+references, configuration, tests, and other code.
+
+============================= MVP =============================
+
+PHASE 8 — FILE EDITING
+------------------------------------------------------------
+Add controlled creation, modification, and patch-based editing.
+
+PHASE 9 — COMMAND EXECUTION
+------------------------------------------------------------
+Allow approved commands, tests, builds, and scripts to run.
+
+PHASE 10 — SAFETY & APPROVAL SYSTEM
+------------------------------------------------------------
+Require approval for risky operations and protect against
+destructive commands and unintended repository changes.
+
+PHASE 11 — GIT INTEGRATION
+------------------------------------------------------------
+Implement:
+  • status
+  • diff
+  • log
+  • branch
+  • other required Git operations
+
+PHASE 12 — SELF-REVIEW & TESTING LOOP
+------------------------------------------------------------
+Agent:
+  Edit → Test → Analyze failure → Fix → Retest → Review diff
+
+PHASE 13 — GIT COMMIT
+------------------------------------------------------------
+Review changes, generate a commit message, request approval,
+and create the commit.
+
+PHASE 14 — GIT PUSH
+------------------------------------------------------------
+Push approved commits to the configured GitHub remote.
+
+============================= V1 ==============================
+
+PHASE 15 — CONTEXT MANAGEMENT
+------------------------------------------------------------
+Select relevant repository context instead of sending the entire
+repository to DeepSeek unnecessarily.
+
+PHASE 16 — LARGE REPOSITORY SUPPORT
+------------------------------------------------------------
+Improve scanning, searching, indexing, and context handling for
+large repositories.
+
+PHASE 17 — FAILURE RECOVERY
+------------------------------------------------------------
+Handle:
+  • Failed commands
+  • Invalid edits
+  • Timeouts
+  • Missing files
+  • Test failures
+  • Git conflicts
+  • Push failures
+  • Invalid tool calls
+
+PHASE 18 — PROJECT INSTRUCTIONS
+------------------------------------------------------------
+Support repository-specific rules such as AGENTS.md.
+
+PHASE 19 — SESSION MANAGEMENT
+------------------------------------------------------------
+Maintain task state, tool history, decisions, changes, command
+results, and reasoning trace references during an agent session.
+
+PHASE 20 — EVALUATION FRAMEWORK
+------------------------------------------------------------
+Create repeatable coding tasks and measure:
+  • Task success
+  • Coding accuracy
+  • Test success
+  • Tool-call errors
+  • Latency
+  • Unnecessary actions
+
+PHASE 21 — PERFORMANCE OPTIMIZATION
+------------------------------------------------------------
+Optimize:
+  • Repository scanning
+  • Context selection
+  • File caching
+  • Model loading
+  • Tool execution
+  • Search
+  • Overall latency
+
+PHASE 22 — MODEL BENCHMARKING
+------------------------------------------------------------
+Compare suitable DeepSeek model variants using the project's
+actual coding-agent evaluation tasks.
+
+============================= V2 ==============================
+
+PHASE 23 — GITHUB API INTEGRATION
+------------------------------------------------------------
+Add GitHub-specific capabilities beyond local Git operations.
+
+PHASE 24 — ISSUE & PULL REQUEST AUTOMATION
+------------------------------------------------------------
+Enable workflows such as:
+
+  Issue → Inspect → Implement → Test → Commit → Push → PR
+
+
+============================================================
+                    FINAL SUCCESS CRITERION
+============================================================
+
+Give the agent:
+
+  "Fix this problem in this unfamiliar repository."
+
+It should be able to:
+
+  1. Understand the repository
+  2. Find the relevant code
+  3. Plan the solution
+  4. Save its reasoning trace to .reason
+  5. Make the required changes
+  6. Run appropriate tests
+  7. Diagnose and fix failures
+  8. Review its own diff
+  9. Ask for approval
+ 10. Commit the changes
+ 11. Push them to GitHub
+
+
+============================================================
+                    ARCHITECTURE PRINCIPLE
+============================================================
+
+The MVP must NOT be a throwaway prototype.
+
+Every MVP component should be designed as a smaller version of
+the final system.
+
+                    MVP
+                     |
+             add capabilities
+                     |
+                     v
+                    V1
+                     |
+             add integrations
+                     |
+                     v
+                    V2
+
+Avoid unnecessary complexity early.
+
+Do NOT begin with:
+  • Vector databases
+  • RAG
+  • Multi-agent systems
+  • Web UI
+  • Cloud deployment
+  • GitHub API
+  • Complex persistent memory
+  • Autonomous background processes
+
+Add them only when the project demonstrates a real need.
+
+============================================================
+                         END
+============================================================

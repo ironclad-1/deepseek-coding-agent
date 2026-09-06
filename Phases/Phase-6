@@ -1,0 +1,40 @@
+PHASE 6 — FILE READING
+
+1. Full file reading
+   → Can we read an entire text file correctly?
+
+2. Line-range reading
+   → Can we request only specific lines, e.g. 2–4?
+
+3. Line numbers
+   → Does the returned content include line numbers so the model
+     can refer to exact code locations later?
+
+4. Missing-file handling
+   → What happens when the requested file doesn't exist?
+
+5. Directory validation
+   → What happens if the agent tries to read a directory
+     instead of a file?
+
+6. Path-traversal protection
+   → Can the agent be prevented from reading files outside
+     the repository?
+     
+     Example:
+       ../secret.txt  → BLOCKED
+
+7. Invalid line-range handling
+   → Does the tool reject invalid requests such as line 0?
+
+8. File-size protection
+   → Does the tool prevent excessively large files from being
+     loaded into the model context?
+
+9. Binary-file protection
+   → Does the tool avoid treating images/executables/etc.
+     as normal text?
+
+10. Structured result
+    → Does the function return a ToolResult that the agent can
+      understand instead of crashing?

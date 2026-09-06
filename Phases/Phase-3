@@ -1,0 +1,19 @@
+User
+  ↓
+Agent Runtime
+  ↓
+DeepSeek
+  ↓
+Tool Call
+  ↓
+Tool Registry
+  ↓
+Execute Tool
+  ↓
+Tool Result
+  ↓
+DeepSeek
+  ↓
+Reason again
+  ↓
+Final Answer

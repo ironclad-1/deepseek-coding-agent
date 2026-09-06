@@ -1,0 +1,30 @@
+Repository path
+      ↓
+Validate repository
+      ↓
+Scan structure
+      ↓
+Identify files/directories
+      ↓
+Identify project metadata
+      ↓
+Identify languages
+      ↓
+Identify tests
+      ↓
+Inspect Git state
+      ↓
+RepositoryContext
+
+
+
+Repository
+├── Root path
+├── Is Git repository?
+├── Files
+├── Directories
+├── File extensions
+├── Languages
+├── Project files
+├── Test files/directories
+└── Git information

@@ -1,0 +1,11 @@
+Python
+  ↓
+Ollama
+  ↓
+DeepSeek-R1
+  ↓
+thinking ─────→ .reason/
+  ↓
+content
+  ↓
+Python

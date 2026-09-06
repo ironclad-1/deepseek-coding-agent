@@ -1,0 +1,34 @@
+============================================================
+              ENVIRONMENT & HARDWARE VALIDATION
+============================================================
+
+OS                 : Windows
+Python             : 3.13.14
+Virtual Environment: Active
+
+Ollama             : 0.32.7
+Git                : 2.54.0.windows.1
+
+CPU                : Intel Core i5-11400H
+CPU Cores          : 6
+Logical Processors : 12
+
+RAM                : ~24 GB installed
+Visible RAM        : ~23.7 GB
+Currently Free     : ~12.3 GB
+
+GPU                : NVIDIA GeForce RTX 2050
+VRAM               : 4 GB
+Driver             : 566.07
+CUDA               : 12.7
+
+Existing Ollama
+Model              : qwen3:8b (~5.2 GB)
+
+# New 
+Model Runtime : Ollama 0.32.7
+Primary Model : deepseek-r1:14b
+Backup Model  : qwen3:8b
+RAM           : ~24 GB
+VRAM          : 4 GB
+Execution     : CPU/RAM-first, GPU acceleration when Ollama can use it

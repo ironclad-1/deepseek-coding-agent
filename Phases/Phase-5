@@ -1,0 +1,21 @@
+Tool
+├── name
+├── description
+├── parameters
+└── function
+       ↓
+ToolRegistry
+├── register()
+├── unregister()
+├── get()
+├── has()
+├── schemas()
+├── execute()
+├── names()
+└── count()
+       ↓
+ToolResult
+├── success
+├── output
+├── error
+└── metadata
