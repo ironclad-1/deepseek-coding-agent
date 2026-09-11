@@ -91,12 +91,22 @@ class AgentRuntime:
 
             final_answer = response.content.strip()
 
-            if not final_answer:
-                raise RuntimeError(
-                    "Model returned neither a tool call nor a final answer."
-                )
+            if final_answer:
+                return final_answer
 
-            return final_answer
+            print(
+                "[MODEL] Empty response received; retrying..."
+            )
+
+            session.add_message(
+                {
+                    "role": "user",
+                    "content": (
+                        "Continue the task. Use the available tools as "
+                        "required and provide a final answer when finished."
+                    ),
+                }
+            )
 
         raise RuntimeError(
             f"Agent exceeded maximum turn limit ({self.max_turns})."
@@ -221,6 +231,6 @@ class AgentRuntime:
                 {
                     "role": "tool",
                     "name": tool_name,
-                    "content": str(result),
+                    "content": result.as_message(),
                 }
             )
