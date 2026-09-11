@@ -7,6 +7,7 @@ from agent.model import ModelProvider, ModelResponse
 from agent.session import AgentSession
 from reasoning.recorder import ReasoningRecorder
 from tools.registry import ToolRegistry
+from results.recorder import save_result
 
 
 class AgentRuntime:
@@ -92,6 +93,14 @@ class AgentRuntime:
             final_answer = response.content.strip()
 
             if final_answer:
+                result_path = save_result(
+                    content=final_answer,
+                    session_id=session.session_id,
+                    turn=session.turn,
+                )
+
+                print(f"[RESULT] {result_path}")
+
                 return final_answer
 
             print(

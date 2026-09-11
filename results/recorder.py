@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 
 from config import RESULTS_DIR
 
@@ -10,7 +9,7 @@ def save_result(
     content: str,
     session_id: str,
     turn: int,
-) -> Path:
+):
     """
     Save the final agent answer to the .results directory.
     """
