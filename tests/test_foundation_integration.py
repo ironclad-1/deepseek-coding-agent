@@ -1,37 +1,136 @@
 from __future__ import annotations
+import subprocess
 from pathlib import Path
 from agent.model import ModelProvider
 from agent.runtime import AgentRuntime
 from config import REASONING_DIR
 from reasoning.recorder import ReasoningRecorder
-from tools.filesystem import edit_file, read_file, write_file
+from tools.filesystem import read_file
 from tools.registry import Tool, ToolRegistry
 from tools.search import search_repo
-from tools.terminal import run_command
+from git.operations import git_status, git_diff, git_log, git_branch, git_remote
 
-REPOSITORY_ROOT = Path(r"C:\Users\kinga\Desktop\Try_rag\AgentTestRepos\phase9-agent-test")
+REPOSITORY_ROOT = Path(
+    r"C:\Users\kinga\Desktop\Try_rag\AgentTestRepos\phase11-agent-test"
+)
+
+
+def _run_git(*arguments: str) -> None:
+    result = subprocess.run(
+        ["git", *arguments],
+        cwd=REPOSITORY_ROOT,
+        shell=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Git command failed: {' '.join(arguments)}\n"
+            f"STDOUT: {result.stdout}\n"
+            f"STDERR: {result.stderr}"
+        )
+
 
 def _prepare_test_repository() -> None:
-    REPOSITORY_ROOT.mkdir(parents=True, exist_ok=True)
-    (REPOSITORY_ROOT / "README.md").write_text(
-        "# Phase 9 Test Repository\n\n"
-        "This repository is used to test command execution.\n",
+    REPOSITORY_ROOT.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    if not (REPOSITORY_ROOT / ".git").exists():
+        _run_git("init")
+        _run_git("branch", "-M", "main")
+        _run_git("config", "user.name", "Phase 11 Test")
+        _run_git(
+            "config",
+            "user.email",
+            "phase11@test.local",
+        )
+
+    readme_path = REPOSITORY_ROOT / "README.md"
+
+    readme_path.write_text(
+        "# Phase 11 Test Repository\n"
+        "This repository is used to test Git integration.\n",
         encoding="utf-8",
     )
-    (REPOSITORY_ROOT / "app.py").write_text(
+
+    app_path = REPOSITORY_ROOT / "app.py"
+
+    app_path.write_text(
         "def greet():\n"
         "    return 'Hello'\n",
         encoding="utf-8",
     )
 
+    _run_git("add", "README.md", "app.py")
+
+    commit_check = subprocess.run(
+        [
+            "git",
+            "rev-parse",
+            "--verify",
+            "HEAD",
+        ],
+        cwd=REPOSITORY_ROOT,
+        shell=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    if commit_check.returncode != 0:
+        _run_git(
+            "commit",
+            "-m",
+            "Initial Phase 11 test commit",
+        )
+
+    remote_check = subprocess.run(
+        [
+            "git",
+            "remote",
+            "get-url",
+            "origin",
+        ],
+        cwd=REPOSITORY_ROOT,
+        shell=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    if remote_check.returncode != 0:
+        _run_git(
+            "remote",
+            "add",
+            "origin",
+            "https://example.com/phase11-test.git",
+        )
+
+    readme_path.write_text(
+        "# Phase 11 Test Repository\n"
+        "This repository is used to test Git integration.\n"
+        "This is an uncommitted Phase 11 test change.\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> None:
     print("=" * 60)
-    print("PHASE 9 — END-TO-END COMMAND EXECUTION INTEGRATION TEST")
+    print("PHASE 11 — REAL MODEL GIT INTEGRATION TEST")
     print("=" * 60)
 
     _prepare_test_repository()
 
-    print(f"\nRepository: {REPOSITORY_ROOT}")
+    print(
+        f"\nRepository: {REPOSITORY_ROOT}"
+    )
 
     model = ModelProvider()
 
@@ -39,7 +138,10 @@ def main() -> None:
     model.check_connection()
     print("✓ Ollama connection successful")
 
-    print(f"Checking model: {model.model}...")
+    print(
+        f"Checking model: {model.model}..."
+    )
+
     if not model.check_model():
         raise RuntimeError(
             f"Model '{model.model}' is not installed."
@@ -61,21 +163,29 @@ def main() -> None:
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "Text to search for in the repository.",
+                        "description": (
+                            "Text to search for in the repository."
+                        ),
                     },
                     "case_sensitive": {
                         "type": "boolean",
-                        "description": "Whether the search should be case-sensitive.",
+                        "description": (
+                            "Whether the search should be case-sensitive."
+                        ),
                     },
                     "max_results": {
                         "type": "integer",
-                        "description": "Maximum number of search results.",
+                        "description": (
+                            "Maximum number of search results."
+                        ),
                     },
                 },
                 "required": ["query"],
             },
-            function=lambda query, case_sensitive=False, max_results=100: (
-                search_repo(
+            function=(
+                lambda query,
+                case_sensitive=False,
+                max_results=100: search_repo(
                     REPOSITORY_ROOT,
                     query,
                     case_sensitive=case_sensitive,
@@ -97,21 +207,29 @@ def main() -> None:
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Repository-relative path of the file.",
+                        "description": (
+                            "Repository-relative path of the file."
+                        ),
                     },
                     "start_line": {
                         "type": "integer",
-                        "description": "First line to read, starting at 1.",
+                        "description": (
+                            "First line to read, starting at 1."
+                        ),
                     },
                     "end_line": {
                         "type": "integer",
-                        "description": "Last line to read, inclusive.",
+                        "description": (
+                            "Last line to read, inclusive."
+                        ),
                     },
                 },
                 "required": ["path"],
             },
-            function=lambda path, start_line=None, end_line=None: (
-                read_file(
+            function=(
+                lambda path,
+                start_line=None,
+                end_line=None: read_file(
                     REPOSITORY_ROOT,
                     path,
                     start_line=start_line,
@@ -123,147 +241,139 @@ def main() -> None:
 
     tools.register(
         Tool(
-            name="write_file",
+            name="git_status",
             description=(
-                "Create a UTF-8 text file inside the repository. "
-                "Existing files are protected unless overwrite is enabled."
+                "Show the current Git branch and working-tree status. "
+                "This is a read-only Git operation."
             ),
             parameters={
                 "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Repository-relative path of the file.",
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "Complete UTF-8 content to write.",
-                    },
-                    "overwrite": {
-                        "type": "boolean",
-                        "description": "Whether an existing file may be replaced.",
-                    },
-                },
-                "required": ["path", "content"],
+                "properties": {},
             },
-            function=lambda path, content, overwrite=False: (
-                write_file(
-                    REPOSITORY_ROOT,
-                    path,
-                    content,
-                    overwrite=overwrite,
-                )
+            function=lambda: git_status(
+                REPOSITORY_ROOT
             ),
         )
     )
 
     tools.register(
         Tool(
-            name="edit_file",
+            name="git_diff",
             description=(
-                "Edit a UTF-8 text file by replacing exactly one occurrence "
-                "of old_text with new_text. The edit fails if old_text is "
-                "missing or occurs more than once."
+                "Show the current unstaged Git diff. "
+                "This is a read-only Git operation."
             ),
             parameters={
                 "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Repository-relative path of the file.",
-                    },
-                    "old_text": {
-                        "type": "string",
-                        "description": "Exact text to replace. Must occur exactly once.",
-                    },
-                    "new_text": {
-                        "type": "string",
-                        "description": "Replacement text.",
-                    },
-                },
-                "required": ["path", "old_text", "new_text"],
+                "properties": {},
             },
-            function=lambda path, old_text, new_text: (
-                edit_file(
-                    REPOSITORY_ROOT,
-                    path,
-                    old_text,
-                    new_text,
-                )
+            function=lambda: git_diff(
+                REPOSITORY_ROOT
             ),
         )
     )
 
     tools.register(
         Tool(
-            name="run_command",
+            name="git_log",
             description=(
-                "Run one allowed command inside the repository and return "
-                "its stdout, stderr, exit code, and execution result."
+                "Show recent Git commits. "
+                "This is a read-only Git operation."
             ),
             parameters={
                 "type": "object",
                 "properties": {
-                    "command": {
-                        "type": "string",
+                    "max_entries": {
+                        "type": "integer",
                         "description": (
-                            "Command to execute. Allowed executables include "
-                            "python, py, pytest, git, and pip."
+                            "Maximum number of commits to return."
                         ),
                     },
-                    "timeout": {
-                        "type": "integer",
-                        "description": "Maximum execution time in seconds.",
-                    },
                 },
-                "required": ["command"],
             },
-            function=lambda command, timeout=30: (
-                run_command(
-                    REPOSITORY_ROOT,
-                    command,
-                    timeout=timeout,
-                )
+            function=lambda max_entries=10: git_log(
+                REPOSITORY_ROOT,
+                max_entries=max_entries,
             ),
         )
     )
 
-    print(f"✓ Registered tools: {tools.names()}")
+    tools.register(
+        Tool(
+            name="git_branch",
+            description=(
+                "Show the current Git branch. "
+                "This is a read-only Git operation."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {},
+            },
+            function=lambda: git_branch(
+                REPOSITORY_ROOT
+            ),
+        )
+    )
 
-    recorder = ReasoningRecorder(REASONING_DIR)
+    tools.register(
+        Tool(
+            name="git_remote",
+            description=(
+                "Show the configured Git remotes. "
+                "This is a read-only Git operation."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {},
+            },
+            function=lambda: git_remote(
+                REPOSITORY_ROOT
+            ),
+        )
+    )
 
-    print(f"✓ Reasoning directory: {REASONING_DIR}")
+    print(
+        f"✓ Registered tools: {tools.names()}"
+    )
+
+    recorder = ReasoningRecorder(
+        REASONING_DIR
+    )
+
+    print(
+        f"✓ Reasoning directory: {REASONING_DIR}"
+    )
 
     runtime = AgentRuntime(
         model=model,
         tools=tools,
         recorder=recorder,
-        max_turns=12,
+        max_turns=15,
     )
 
-    print("✓ Agent runtime initialized")
+    print(
+        "✓ Agent runtime initialized"
+    )
 
     prompt = (
         "Work only inside this repository. "
+        "This is a Phase 11 Git integration test. "
         "First use search_repo to find the greet function. "
         "Then use read_file on app.py. "
-        "Create a new file named phase9_test.py using write_file. "
-        "The file must contain Python code that prints exactly "
-        "'Phase 9 command execution works'. "
-        "Then use edit_file to change the return value in app.py "
-        "from 'Hello' to 'Hello, world'. "
-        "Then use run_command to execute the command "
-        "'python phase9_test.py'. "
-        "Inspect the command result and confirm that the expected "
-        "message was printed. "
-        "Finally use read_file on app.py and phase9_test.py to verify "
-        "the final files. "
-        "Do not use any tools other than the available repository tools. "
-        "After verification, explain what you changed and what command "
-        "was executed."
+        "After that, you MUST use each of these five Git tools: "
+        "git_status, git_branch, git_log, git_remote, and git_diff. "
+        "Use each Git tool at least once. "
+        "Do not modify any files and do not use write_file, "
+        "edit_file, or run_command. "
+        "Inspect the results from all five Git tools and then "
+        "provide a final summary containing the current branch, "
+        "working-tree status, recent commit information, "
+        "configured remote, and the current diff."
     )
 
-    print("\nStarting Phase 9 real repository task...\n")
+    print(
+        "\nStarting Phase 11 real-model Git task...\n"
+    )
 
     answer = runtime.run(prompt)
 
@@ -275,55 +385,108 @@ def main() -> None:
 
     print()
     print("=" * 60)
-    print("VERIFYING FILESYSTEM AND COMMAND RESULTS")
+    print("VERIFYING GIT INTEGRATION RESULTS")
     print("=" * 60)
 
-    app_path = REPOSITORY_ROOT / "app.py"
-    new_file_path = REPOSITORY_ROOT / "phase9_test.py"
-
-    if not app_path.exists():
-        raise AssertionError("app.py was not found.")
-
-    if not new_file_path.exists():
-        raise AssertionError("phase9_test.py was not created.")
-
-    app_content = app_path.read_text(encoding="utf-8")
-    new_file_content = new_file_path.read_text(encoding="utf-8")
-
-    if "return 'Hello, world'" not in app_content:
-        raise AssertionError(
-            "app.py was not changed to return 'Hello, world'."
-        )
-
-    if "Phase 9 command execution works" not in new_file_content:
-        raise AssertionError(
-            "phase9_test.py does not contain the expected output."
-        )
-
-    command_check = run_command(
-        REPOSITORY_ROOT,
-        "python phase9_test.py",
+    status_result = git_status(
+        REPOSITORY_ROOT
     )
 
-    if not command_check.success:
+    branch_result = git_branch(
+        REPOSITORY_ROOT
+    )
+
+    log_result = git_log(
+        REPOSITORY_ROOT,
+        max_entries=10,
+    )
+
+    remote_result = git_remote(
+        REPOSITORY_ROOT
+    )
+
+    diff_result = git_diff(
+        REPOSITORY_ROOT
+    )
+
+    if not status_result.success:
         raise AssertionError(
-            command_check.error or "Final command verification failed."
+            status_result.error
+            or "git_status verification failed."
         )
 
-    if "Phase 9 command execution works" not in command_check.output:
+    if not branch_result.success:
         raise AssertionError(
-            "Expected command output was not found."
+            branch_result.error
+            or "git_branch verification failed."
         )
 
-    print("✓ phase9_test.py was created")
-    print("✓ app.py was edited")
-    print("✓ Python command executed successfully")
-    print("✓ Expected command output was captured")
-    print("✓ Final files contain the expected changes")
+    if not log_result.success:
+        raise AssertionError(
+            log_result.error
+            or "git_log verification failed."
+        )
+
+    if not remote_result.success:
+        raise AssertionError(
+            remote_result.error
+            or "git_remote verification failed."
+        )
+
+    if not diff_result.success:
+        raise AssertionError(
+            diff_result.error
+            or "git_diff verification failed."
+        )
+
+    if branch_result.output.strip() != "main":
+        raise AssertionError(
+            "Expected current branch to be main."
+        )
+
+    if "README.md" not in status_result.output:
+        raise AssertionError(
+            "Expected README.md modification was not found."
+        )
+
+    if "Initial Phase 11 test commit" not in log_result.output:
+        raise AssertionError(
+            "Initial Phase 11 commit was not found."
+        )
+
+    if "origin" not in remote_result.output:
+        raise AssertionError(
+            "Origin remote was not found."
+        )
+
+    if "uncommitted Phase 11 test change" not in diff_result.output:
+        raise AssertionError(
+            "Expected README.md change was not found in git diff."
+        )
+
+    print(
+        "✓ git_status returned the expected working-tree state"
+    )
+
+    print(
+        "✓ git_branch returned main"
+    )
+
+    print(
+        "✓ git_log returned the test commit"
+    )
+
+    print(
+        "✓ git_remote returned origin"
+    )
+
+    print(
+        "✓ git_diff returned the expected uncommitted change"
+    )
 
     print()
     print("=" * 60)
-    print("PHASE 9 INTEGRATION TEST COMPLETE")
+    print("PHASE 11 GIT INTEGRATION TEST COMPLETE")
     print("=" * 60)
 
 

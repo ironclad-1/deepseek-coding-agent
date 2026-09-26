@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from agent.model import ModelProvider, ModelResponse
+from agent.runner import AgentRunner
 from agent.session import AgentSession
+from config import PROJECT_ROOT
 from reasoning.recorder import ReasoningRecorder
-from tools.registry import ToolRegistry
 from results.recorder import save_result
+from safety.approval import ApprovalDecision, ApprovalManager
+from tools.registry import ToolRegistry, ToolResult
 
 
 class AgentRuntime:
@@ -26,14 +30,33 @@ class AgentRuntime:
         ↙       ↘
       Yes       No
        ↓         ↓
-    Tool      Final answer
+    Safety    Final answer
        ↓
-    Result
-       ↓
-     Model
-       ↓
-     repeat
+    Approval?
+    ↙      ↘
+   Yes      No
+   ↓         ↓
+ Execute   Reject
+   ↓         ↓
+ Result ←────┘
+   ↓
+ Model
+   ↓
+ Changes made?
+   ↓
+ Self-review
+   ├── Run tests
+   └── Review git diff
+   ↓
+ Feed results to model
+   ↓
+ repeat
     """
+
+    MODIFYING_TOOLS = {
+        "write_file",
+        "edit_file",
+    }
 
     def __init__(
         self,
@@ -42,20 +65,45 @@ class AgentRuntime:
         recorder: ReasoningRecorder,
         *,
         max_turns: int = 20,
+        safety: ApprovalManager | None = None,
+        repository_root: Path | None = None,
     ) -> None:
         self.model = model
         self.tools = tools
         self.recorder = recorder
         self.max_turns = max_turns
+        self.safety = safety or ApprovalManager()
+
+        self.repository_root = (
+            repository_root.resolve()
+            if repository_root is not None
+            else PROJECT_ROOT.resolve()
+        )
+
+        self.runner = AgentRunner(
+            repository_root=self.repository_root,
+            command_executor=self._run_runner_command,
+            diff_provider=self._review_runner_diff,
+        )
 
     def run(
         self,
         user_message: str,
         *,
         session: AgentSession | None = None,
+        test_command: str | None = None,
+        test_timeout: int = 30,
     ) -> str:
         """
         Run an agent task until the model produces a final answer.
+
+        When test_command is supplied, successful file modifications
+        trigger the Phase 12 self-review cycle:
+
+            1. Run tests
+            2. Review git diff
+            3. Feed the results back to the model
+            4. Allow the model to fix failures
         """
 
         if session is None:
@@ -84,10 +132,18 @@ class AgentRuntime:
             )
 
             if response.tool_calls:
-                self._handle_tool_calls(
+                changes_made = self._handle_tool_calls(
                     session=session,
                     response=response,
                 )
+
+                if changes_made and test_command:
+                    self._run_self_review(
+                        session=session,
+                        test_command=test_command,
+                        test_timeout=test_timeout,
+                    )
+
                 continue
 
             final_answer = response.content.strip()
@@ -170,10 +226,14 @@ class AgentRuntime:
         *,
         session: AgentSession,
         response: ModelResponse,
-    ) -> None:
+    ) -> bool:
         """
-        Execute every tool requested by the model and add the
-        resulting messages to the conversation.
+        Check safety for every tool requested by the model,
+        request user approval when necessary, and execute
+        only permitted tools.
+
+        Returns True when at least one modifying tool completed
+        successfully.
         """
 
         assistant_tool_calls: list[dict[str, Any]] = []
@@ -190,7 +250,6 @@ class AgentRuntime:
                 }
             )
 
-        # Record the assistant message that requested the tools.
         session.add_message(
             {
                 "role": "assistant",
@@ -199,6 +258,8 @@ class AgentRuntime:
             }
         )
 
+        changes_made = False
+
         for tool_call in response.tool_calls:
             function = tool_call.function
 
@@ -206,9 +267,27 @@ class AgentRuntime:
             arguments = function.arguments
 
             if not isinstance(arguments, dict):
-                raise RuntimeError(
-                    f"Arguments for tool '{tool_name}' must be a dictionary."
+                result = ToolResult(
+                    success=False,
+                    error=(
+                        f"Arguments for tool '{tool_name}' "
+                        "must be a dictionary."
+                    ),
                 )
+
+                print(
+                    f"[TOOL ERROR] {result.error}"
+                )
+
+                session.add_message(
+                    {
+                        "role": "tool",
+                        "name": tool_name,
+                        "content": result.as_message(),
+                    }
+                )
+
+                continue
 
             print(f"[TOOL] {tool_name}")
             print(
@@ -216,26 +295,17 @@ class AgentRuntime:
                 f"{json.dumps(arguments, default=str)}"
             )
 
-            try:
-                result = self.tools.execute(
-                    tool_name,
-                    arguments,
-                )
+            result = self._execute_tool_with_safety(
+                tool_name=tool_name,
+                arguments=arguments,
+            )
 
-                session.tool_calls += 1
+            if (
+                result.success
+                and tool_name in self.MODIFYING_TOOLS
+            ):
+                changes_made = True
 
-            except Exception as exc:
-                result = (
-                    f"Tool '{tool_name}' failed: "
-                    f"{type(exc).__name__}: {exc}"
-                )
-
-                print(f"[TOOL ERROR] {result}")
-
-            else:
-                print(f"[RESULT] {result}")
-
-            # Return the tool result to the model.
             session.add_message(
                 {
                     "role": "tool",
@@ -243,3 +313,242 @@ class AgentRuntime:
                     "content": result.as_message(),
                 }
             )
+
+        return changes_made
+
+    def _execute_tool_with_safety(
+        self,
+        *,
+        tool_name: str,
+        arguments: dict[str, Any],
+    ) -> ToolResult:
+        """
+        Central Phase 10 safety gateway.
+
+        Every tool execution, including Phase 12 runner operations,
+        must pass through this method.
+        """
+
+        safety_check = self.safety.check(
+            tool_name,
+            arguments,
+        )
+
+        print(
+            f"[SAFETY] {safety_check.decision.value} "
+            f"- {safety_check.reason}"
+        )
+
+        if safety_check.decision == ApprovalDecision.DENIED:
+            result = ToolResult(
+                success=False,
+                error=(
+                    f"Tool '{tool_name}' was denied by the "
+                    f"safety policy: {safety_check.reason}"
+                ),
+            )
+
+            print(
+                f"[SAFETY DENIED] {safety_check.reason}"
+            )
+
+            return result
+
+        if (
+            safety_check.decision
+            == ApprovalDecision.REQUIRE_APPROVAL
+        ):
+            approved = self._request_approval(
+                tool_name=tool_name,
+                arguments=arguments,
+                reason=safety_check.reason,
+            )
+
+            if not approved:
+                result = ToolResult(
+                    success=False,
+                    error=(
+                        f"User denied execution of tool "
+                        f"'{tool_name}'."
+                    ),
+                )
+
+                print(
+                    f"[APPROVAL] User denied: {tool_name}"
+                )
+
+                return result
+
+            print(
+                f"[APPROVAL] User approved: {tool_name}"
+            )
+
+        try:
+            result = self.tools.execute(
+                tool_name,
+                arguments,
+            )
+
+            return result
+
+        except Exception as exc:
+            result = ToolResult(
+                success=False,
+                error=(
+                    f"Tool '{tool_name}' failed: "
+                    f"{type(exc).__name__}: {exc}"
+                ),
+            )
+
+            print(
+                f"[TOOL ERROR] {result.error}"
+            )
+
+            return result
+
+        finally:
+            print()
+
+    def _run_runner_command(
+        self,
+        *,
+        command: str,
+        timeout: int = 30,
+    ) -> ToolResult:
+        """
+        Execute a Phase 12 test command through the
+        Phase 10 safety layer.
+        """
+
+        return self._execute_tool_with_safety(
+            tool_name="run_command",
+            arguments={
+                "command": command,
+                "timeout": timeout,
+            },
+        )
+
+    def _review_runner_diff(self) -> ToolResult:
+        """
+        Obtain git diff through the Phase 10 safety gateway.
+        """
+
+        return self._execute_tool_with_safety(
+            tool_name="git_diff",
+            arguments={},
+        )
+
+    def _run_self_review(
+        self,
+        *,
+        session: AgentSession,
+        test_command: str,
+        test_timeout: int,
+    ) -> None:
+        """
+        Run the Phase 12 validation cycle after file modifications.
+        """
+
+        print()
+        print("=" * 60)
+        print("PHASE 12 SELF-REVIEW")
+        print("=" * 60)
+
+        validation = self.runner.validate(
+            test_command=test_command,
+            timeout=test_timeout,
+        )
+
+        test_feedback = self.runner.format_test_feedback(
+            validation.test_result
+        )
+
+        review_feedback = self.runner.format_review_feedback(
+            validation.review_result
+        )
+
+        print("[SELF-REVIEW]")
+        print(test_feedback)
+        print(review_feedback)
+
+        feedback_parts = [
+            "Phase 12 self-review has completed.",
+            "",
+            test_feedback,
+            "",
+            review_feedback,
+        ]
+
+        if validation.error:
+            feedback_parts.extend(
+                [
+                    "",
+                    f"Validation error: {validation.error}",
+                ]
+            )
+
+        if validation.tests_passed:
+            feedback_parts.extend(
+                [
+                    "",
+                    (
+                        "Tests passed. Review the diff and continue "
+                        "the task. Make further changes only if required."
+                    ),
+                ]
+            )
+        else:
+            feedback_parts.extend(
+                [
+                    "",
+                    (
+                        "Tests failed. Inspect the failure output, "
+                        "identify the cause, make the necessary fixes, "
+                        "and run the tests again."
+                    ),
+                ]
+            )
+
+        session.add_message(
+            {
+                "role": "user",
+                "content": "\n".join(feedback_parts),
+            }
+        )
+
+    def _request_approval(
+        self,
+        *,
+        tool_name: str,
+        arguments: dict[str, Any],
+        reason: str,
+    ) -> bool:
+        """
+        Ask the user for approval before executing a
+        tool classified as requiring approval.
+        """
+
+        print()
+        print("=" * 60)
+        print("APPROVAL REQUIRED")
+        print("=" * 60)
+        print(f"Tool: {tool_name}")
+        print(f"Reason: {reason}")
+        print(
+            "Arguments: "
+            f"{json.dumps(arguments, indent=2, default=str)}"
+        )
+        print("=" * 60)
+
+        while True:
+            response = input(
+                "Approve this tool execution? [y/n]: "
+            ).strip().lower()
+
+            if response in {"y", "yes"}:
+                return True
+
+            if response in {"n", "no"}:
+                return False
+
+            print("Please enter 'y' or 'n'.")
