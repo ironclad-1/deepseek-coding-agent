@@ -11,37 +11,40 @@ The agent is being developed phase-by-phase so that each capability becomes part
 The final system is intended to support a workflow such as:
 
 ```text
-User Task
-    ↓
-Understand Repository
-    ↓
-Plan / Reason
-    ↓
-Propose Changes
-    ↓
-Explain WHAT + WHY
-    ↓
-User Approval
-    ├── Approved
-    │      ↓
-    │   Execute Changes
-    │      ↓
-    │   Test
-    │      ↓
-    │   Review
-    │      ↓
-    │   Commit
-    │      ↓
-    │   Push
-    │
-    └── Rejected
-           ↓
-       Ask Rejection Reason
-           ↓
-       Feed Reason to Model
-           ↓
-       Revised Plan / Clarification / Stop
+                    User Task
+                        │
+                        ▼
+              Understand Repository
+                        │
+                        ▼
+                  Plan / Reason
+                        │
+                        ▼
+   ┌───────────► Propose Changes
+   │                    │
+   │                    ▼
+   │           Explain WHAT + WHY
+   │                    │
+   │                    ▼
+   │               User Approval
+   │              ╱            ╲
+   │       Rejected            Approved
+   │           │                   │
+   │           ▼                   ▼
+   │   Ask Rejection Reason       Test
+   │           │                   │
+   │           ▼                   ▼
+   │   Feed Reason to Model      Review
+   │           │                   │
+   │      ┌────┴────┐              ▼
+   │      │         │            Commit
+   │      ▼         ▼              │
+   │ User suggests  No changes     ▼
+   │ modification   required      Push
+   │      │         │              │
+   └──────┘         └──────────► Stop
 ```
+
 ## Quick Start
 
 ### 1. Create and activate the virtual environment
