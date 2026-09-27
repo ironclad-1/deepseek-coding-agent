@@ -42,6 +42,9 @@ SAFE_TOOLS = {
 APPROVAL_TOOLS = {
     "write_file",
     "edit_file",
+    "git_add",
+    "git_commit",
+    "git_push",
 }
 
 DENIED_TOOLS = {
@@ -89,9 +92,10 @@ DENIED_COMMANDS = {
 
 class ApprovalManager:
     """
-    Phase 10 safety policy.
+    Phase 14 safety policy.
 
     This class only decides whether a tool request is:
+
         SAFE
         REQUIRE_APPROVAL
         DENIED
@@ -124,7 +128,10 @@ class ApprovalManager:
         if tool_name in DENIED_TOOLS:
             return SafetyCheck(
                 decision=ApprovalDecision.DENIED,
-                reason=f"Tool is denied by the safety policy: {tool_name}",
+                reason=(
+                    f"Tool is denied by the safety policy: "
+                    f"{tool_name}"
+                ),
             )
 
         if tool_name in SAFE_TOOLS:
@@ -134,9 +141,41 @@ class ApprovalManager:
             )
 
         if tool_name in APPROVAL_TOOLS:
+            if tool_name == "git_add":
+                return SafetyCheck(
+                    decision=ApprovalDecision.REQUIRE_APPROVAL,
+                    reason=(
+                        "Git staging changes the repository index "
+                        "and requires user approval."
+                    ),
+                )
+
+            if tool_name == "git_commit":
+                return SafetyCheck(
+                    decision=ApprovalDecision.REQUIRE_APPROVAL,
+                    reason=(
+                        "Creating a Git commit changes repository "
+                        "history and requires user approval."
+                    ),
+                )
+
+            if tool_name == "git_push":
+                return SafetyCheck(
+                    decision=ApprovalDecision.REQUIRE_APPROVAL,
+                    reason=(
+                        "Pushing commits to a remote repository "
+                        "sends repository changes outside the local "
+                        "working copy and requires explicit user "
+                        "approval."
+                    ),
+                )
+
             return SafetyCheck(
                 decision=ApprovalDecision.REQUIRE_APPROVAL,
-                reason=f"Tool modifies repository files: {tool_name}",
+                reason=(
+                    f"Tool modifies repository files: "
+                    f"{tool_name}"
+                ),
             )
 
         if tool_name == "run_command":
@@ -144,7 +183,10 @@ class ApprovalManager:
 
         return SafetyCheck(
             decision=ApprovalDecision.DENIED,
-            reason=f"Unknown tool is denied by default: {tool_name}",
+            reason=(
+                f"Unknown tool is denied by default: "
+                f"{tool_name}"
+            ),
         )
 
     def _check_command(
@@ -156,7 +198,10 @@ class ApprovalManager:
         if not isinstance(command, str) or not command.strip():
             return SafetyCheck(
                 decision=ApprovalDecision.DENIED,
-                reason="run_command requires a non-empty command string.",
+                reason=(
+                    "run_command requires a non-empty "
+                    "command string."
+                ),
             )
 
         parts = command.strip().split()
@@ -167,12 +212,20 @@ class ApprovalManager:
                 reason="Command is empty.",
             )
 
-        executable = parts[0].strip('"').strip("'").lower()
+        executable = (
+            parts[0]
+            .strip('"')
+            .strip("'")
+            .lower()
+        )
 
         if executable in DENIED_COMMANDS:
             return SafetyCheck(
                 decision=ApprovalDecision.DENIED,
-                reason=f"Command is explicitly denied: {executable}",
+                reason=(
+                    f"Command is explicitly denied: "
+                    f"{executable}"
+                ),
             )
 
         command_key = (
@@ -183,16 +236,25 @@ class ApprovalManager:
         if command_key in SAFE_COMMANDS:
             return SafetyCheck(
                 decision=ApprovalDecision.SAFE,
-                reason=f"Read-only repository command: {command}",
+                reason=(
+                    f"Read-only repository command: "
+                    f"{command}"
+                ),
             )
 
         if executable in APPROVAL_COMMANDS:
             return SafetyCheck(
                 decision=ApprovalDecision.REQUIRE_APPROVAL,
-                reason=f"Command execution requires approval: {command}",
+                reason=(
+                    f"Command execution requires approval: "
+                    f"{command}"
+                ),
             )
 
         return SafetyCheck(
             decision=ApprovalDecision.DENIED,
-            reason=f"Command is not permitted by the safety policy: {command}",
+            reason=(
+                f"Command is not permitted by the safety policy: "
+                f"{command}"
+            ),
         )

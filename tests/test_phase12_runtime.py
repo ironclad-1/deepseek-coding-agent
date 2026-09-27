@@ -609,6 +609,7 @@ def test_phase12_runtime_runner_command_uses_safety(
 
     assert requested_tools == [
         "write_file",
+        "write_file",
         "run_command",
         "git_diff",
     ]

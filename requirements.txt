@@ -1,0 +1,42 @@
+agent/
+├── change_manager.py      ← NEW
+├── planner.py             ← MODIFY
+├── runner.py              ✅
+├── runtime.py             ← MODIFY
+├── model.py               ✅
+└── session.py             ✅
+
+safety/
+├── approval.py            ← MODIFY
+└── change_gate.py         ← MODIFY
+
+prompts/
+├── system.txt             ← MODIFY
+└── approval.txt           ← NEW
+
+tests/
+├── test_change_gate.py        ← NEW
+├── test_change_manager.py     ← NEW
+└── test_phase13_git_commit.py ← NEW later
+
+main.py                   ← MODIFY
+git/operations.py         ✅ Phase 13 Git functions already added
+
+
+
+
+1. agent/change_manager.py
+2. safety/change_gate.py
+3. agent/planner.py
+4. agent/runtime.py
+5. prompts/system.txt
+6. prompts/approval.txt
+7. tests/test_change_manager.py
+8. tests/test_change_gate.py
+9. main.py
+10. test the new approval workflow
+11. Phase 13 git commit tests
+
+
+
+
